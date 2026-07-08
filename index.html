@@ -344,6 +344,7 @@ function setSync(msg, cls) {
 
 async function loadAll() {
   setSync('Loading from cloud…');
+  curWeek = currentWeekIndex();
   try {
     CAMPS = await apiGet('getCampaigns');
     setSync('Up to date', 'ok');
@@ -540,7 +541,6 @@ function currentWeekIndex() {
   return idx;
 }
 function buildWeekPicker() {
-  curWeek = currentWeekIndex();
   const nowIdx = currentWeekIndex();
   document.getElementById('weekPicker').innerHTML = MONDAYS.map((m,i) =>
     '<button class="wp-btn' + (i === curWeek ? ' active' : '') + (i === nowIdx ? ' now' : '') + '" onclick="selWeek(' + i + ')">' +
