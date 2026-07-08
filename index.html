@@ -143,6 +143,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .wsl-show{color:var(--red)}
 .wsl-dl{color:var(--orange)}
 .wsl-pr{color:var(--green)}
+.wsl-core{color:#6A0DAD}
+.fc-cat{font-size:11px;font-weight:600;margin-top:2px}
 .week-nav{display:flex;align-items:center;gap:8px;margin-top:12px}
 .week-nav-btn{padding:8px 14px;border:1.5px solid var(--border);background:var(--surface);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;min-height:40px}
 .week-nav-btn:hover{background:var(--gold-light);border-color:var(--gold)}
@@ -576,13 +578,27 @@ function renderWeek() {
   });
 
   let html = '';
-  const line = (c) => '<div class="fc"><div class="fc-stripe" style="background:' + getColor(c.cat) + '"></div><div class="fc-body"><div class="fc-name">' + c.label + '</div><div class="fc-dates"><div class="fc-date-item"><span class="fc-date-lbl">' + (c.print ? 'Pub' : 'Event') + '</span><span class="fc-date-val red">' + fmtDate(c.event) + '</span></div>' + (c.dl ? '<div class="fc-date-item"><span class="fc-date-lbl">Deadline</span><span class="fc-date-val orange">' + fmtDate(c.dl) + '</span></div>' : '') + '</div></div></div>';
+  const coreSec = '<div class="week-sec-lbl wsl-core">★ Core Brands <span>— always</span></div>' +
+    '<div class="fc"><div class="fc-stripe" style="background:#6A0DAD"></div><div class="fc-body"><div class="fc-name">El Clasificado</div><div class="fc-cat" style="color:#6A0DAD">Core Brand</div></div></div>' +
+    '<div class="fc"><div class="fc-stripe" style="background:#6ABF1E"></div><div class="fc-body"><div class="fc-name">Mas Clientes</div><div class="fc-cat" style="color:#6ABF1E">Core Brand</div></div></div>';
+  html += coreSec;
+
+  const line = (c) => {
+    const ps = prospectStart(c.event, c.lg);
+    const psLabel = ps ? MO_SHORT[ps.getMonth()] + ' ' + String(ps.getDate()).padStart(2,'0') : null;
+    return '<div class="fc"><div class="fc-stripe" style="background:' + getColor(c.cat) + '"></div><div class="fc-body"><div class="fc-name">' + c.label + '</div><div class="fc-dates">' +
+      '<div class="fc-date-item"><span class="fc-date-lbl">' + (c.print ? 'Pub' : 'Event') + '</span><span class="fc-date-val red">' + fmtDate(c.event) + '</span></div>' +
+      (c.dl ? '<div class="fc-date-item"><span class="fc-date-lbl">Deadline</span><span class="fc-date-val orange">' + fmtDate(c.dl) + '</span></div>' : '') +
+      (psLabel ? '<div class="fc-date-item"><span class="fc-date-lbl">Prospect From</span><span class="fc-date-val" style="color:var(--green)">' + psLabel + '</span></div>' : '') +
+      '<div class="fc-date-item"><span class="fc-date-lbl">Sales Window</span><span class="fc-date-val" style="color:var(--muted)">' + (c.lg || 4) + ' wks</span></div>' +
+      '</div></div></div>';
+  };
 
   if (shows.length) html += '<div class="week-sec-lbl wsl-show">★ Shows & Publications <span>' + shows.length + '</span></div>' + shows.map(line).join('');
   if (deadlines.length) html += '<div class="week-sec-lbl wsl-dl">▼ Ad Deadlines <span>' + deadlines.length + '</span></div>' + deadlines.map(line).join('');
   if (prospecting.length) html += '<div class="week-sec-lbl wsl-pr">✖ Prospecting <span>' + prospecting.length + '</span></div>' + prospecting.map(line).join('');
 
-  if (!html) html = '<div class="no-results"><div class="nr-icon">📅</div><p>Nothing scheduled this week.</p></div>';
+  if (!shows.length && !deadlines.length && !prospecting.length) html += '<div class="no-results"><div class="nr-icon">📅</div><p>Nothing else scheduled this week.</p></div>';
   document.getElementById('weekCard').innerHTML = html;
 }
 
