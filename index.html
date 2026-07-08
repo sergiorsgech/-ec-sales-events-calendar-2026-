@@ -561,9 +561,18 @@ function renderWeek() {
 
   const shows = CAMPS.filter(c => inWeek(c.event));
   const deadlines = CAMPS.filter(c => inWeek(c.dl));
+  const mondayOf = (d) => {
+    const m = new Date(d);
+    const dow = m.getDay();
+    m.setDate(m.getDate() + (dow === 0 ? -6 : 1 - dow));
+    return m;
+  };
   const prospecting = CAMPS.filter(c => {
     const ps = prospectStart(c.event, c.lg);
-    return ps && ps >= start && ps <= end;
+    const cutoffDate = parseDate(c.dl) || parseDate(c.event);
+    if (!ps || !cutoffDate) return false;
+    const cutoffWeekStart = mondayOf(cutoffDate);
+    return end >= ps && start < cutoffWeekStart;
   });
 
   let html = '';
@@ -571,7 +580,7 @@ function renderWeek() {
 
   if (shows.length) html += '<div class="week-sec-lbl wsl-show">★ Shows & Publications <span>' + shows.length + '</span></div>' + shows.map(line).join('');
   if (deadlines.length) html += '<div class="week-sec-lbl wsl-dl">▼ Ad Deadlines <span>' + deadlines.length + '</span></div>' + deadlines.map(line).join('');
-  if (prospecting.length) html += '<div class="week-sec-lbl wsl-pr">✖ Start Prospecting <span>' + prospecting.length + '</span></div>' + prospecting.map(line).join('');
+  if (prospecting.length) html += '<div class="week-sec-lbl wsl-pr">✖ Prospecting <span>' + prospecting.length + '</span></div>' + prospecting.map(line).join('');
 
   if (!html) html = '<div class="no-results"><div class="nr-icon">📅</div><p>Nothing scheduled this week.</p></div>';
   document.getElementById('weekCard').innerHTML = html;
