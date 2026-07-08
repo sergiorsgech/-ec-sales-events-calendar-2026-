@@ -546,6 +546,8 @@ function buildWeekPicker() {
     '<button class="wp-btn' + (i === curWeek ? ' active' : '') + (i === nowIdx ? ' now' : '') + '" onclick="selWeek(' + i + ')">' +
       '<span class="wp-date">' + MO_SHORT[m.getMonth()] + ' ' + m.getDate() + '</span></button>'
   ).join('');
+  const activeBtn = document.querySelector('.wp-btn.active');
+  if (activeBtn) activeBtn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
   renderWeek();
 }
 function selWeek(i) { curWeek = i; buildWeekPicker(); }
