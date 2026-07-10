@@ -21,7 +21,9 @@ module.exports = async function (context, req) {
         event: e.event || "",
         dl: e.dl || null,
         lg: e.lg != null ? Number(e.lg) : 4,
-        print: e.print === true || e.print === "true"
+        print: e.print === true || e.print === "true",
+        ticketUrl: e.ticketUrl || null,
+        showTicket: e.showTicket === true || e.showTicket === "true"
       });
     }
 

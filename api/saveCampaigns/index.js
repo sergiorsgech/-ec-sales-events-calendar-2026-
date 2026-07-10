@@ -41,7 +41,9 @@ module.exports = async function (context, req) {
         event: c.event || "",
         dl: c.dl || "",
         lg: c.lg != null ? Number(c.lg) : 4,
-        print: c.print === true
+        print: c.print === true,
+        ticketUrl: c.ticketUrl || "",
+        showTicket: c.showTicket === true
       });
     }
 
