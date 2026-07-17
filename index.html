@@ -119,6 +119,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .brand-modal-btns button{flex:1;padding:9px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer}
 .bm-save{background:var(--brand);color:var(--gold)}
 .bm-cancel{background:var(--border);color:var(--text)}
+.promo-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
+.promo-card img{width:100%;display:block;max-height:220px;object-fit:cover}
+.promo-body{padding:14px}
+.promo-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px}
+.promo-desc{font-size:13px;color:var(--muted);line-height:1.4;margin-bottom:8px;white-space:pre-wrap}
+.promo-dates{font-size:11px;color:var(--muted);margin-bottom:8px}
+.promo-links{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.promo-actions{display:flex;gap:8px;border-top:1px solid var(--border);padding-top:8px;margin-top:4px}
+.promo-edit,.promo-del{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer}
+.promo-del{color:var(--red)}
 .cc-type.show{background:#CC000020;color:#CC0000}
 .cc-type.pub{background:#D81B6020;color:#D81B60}
 .past-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#fff;background:#9E9E9E;padding:2px 8px;border-radius:8px;margin-left:6px}
@@ -251,6 +261,7 @@ body.editing .add-btn{display:block}
     <button class="tab-btn active" id="tab-dir"   onclick="switchTab('dir')"><span class="ti">🔍</span><span>Campaigns</span></button>
     <button class="tab-btn" id="tab-week"  onclick="switchTab('week')"><span class="ti">📅</span><span>This Week</span></button>
     <button class="tab-btn" id="tab-month" onclick="switchTab('month')"><span class="ti">🗓️</span><span>This Month</span></button>
+    <button class="tab-btn" id="tab-promos" onclick="switchTab('promos')"><span class="ti">📣</span><span>Promos</span></button>
   </div>
 
 </header>
@@ -313,6 +324,34 @@ body.editing .add-btn{display:block}
   <div id="month-grid"></div>
 </div>
 
+<!-- PAGE 4: PROMOS -->
+<div class="page" id="page-promos">
+  <button class="add-btn" onclick="openPromoForm()">➕ Add Promo</button>
+  <div class="edit-form" id="promo-form">
+    <div class="ef-hdr" id="promo-form-hdr">➕ Add Promo</div>
+    <div class="ef-body">
+      <input id="pm-title" type="text" placeholder="Title" maxlength="80">
+      <textarea id="pm-desc" placeholder="Description" maxlength="500" rows="3" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:8px"></textarea>
+      <input id="pm-image" type="text" placeholder="Image / flyer URL (optional)" maxlength="400">
+      <div class="ef-row">
+        <input id="pm-start" type="date" placeholder="Start date">
+        <input id="pm-end" type="date" placeholder="End date">
+      </div>
+      <input id="pm-label1" type="text" placeholder="Link 1 label (optional)" maxlength="40">
+      <input id="pm-url1" type="text" placeholder="Link 1 URL" maxlength="300">
+      <input id="pm-label2" type="text" placeholder="Link 2 label (optional)" maxlength="40">
+      <input id="pm-url2" type="text" placeholder="Link 2 URL" maxlength="300">
+      <input id="pm-label3" type="text" placeholder="Link 3 label (optional)" maxlength="40">
+      <input id="pm-url3" type="text" placeholder="Link 3 URL" maxlength="300">
+      <div class="ef-btns">
+        <button class="ef-save" id="pm-save">Save Promo</button>
+        <button class="ef-cancel" onclick="closePromoForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div id="promo-list"></div>
+</div>
+
 <!-- SAVE BAR -->
 <div class="save-bar" id="saveBar">
   <span id="saveBarMsg">You have unsaved changes</span>
@@ -368,10 +407,12 @@ const YEAR = 2026;
 // State
 let CAMPS = [];      // EC campaigns from Azure
 let BRANDS = [];     // Core Brand link records from Azure
+let PROMOS = [];     // Promo/announcement records from Azure
 let activeCat = 'all', searchQ = '', selectedMonth = new Date().getMonth();
 let curWeek = 0;
 let editing = false, editPin = null, dirty = false;
 let campEditId = null;
+let promoEditId = null;
 
 // ── DATE HELPERS ──────────────────────────────────────────────
 function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
@@ -414,6 +455,7 @@ async function loadAll() {
     CAMPS = await apiGet('getCampaigns');
     try { BRANDS = await apiGet('getBrandLinks'); } catch (e2) { BRANDS = []; }
     refreshCatalogBtn();
+    try { PROMOS = await apiGet('getPromos'); } catch (e3) { PROMOS = []; }
     setSync('Up to date', 'ok');
     setTimeout(() => setSync(''), 1500);
   } catch (e) {
@@ -426,6 +468,7 @@ async function loadAll() {
   buildMonthSelector();
   renderMonth();
   buildCatSelect();
+  renderPromos();
 }
 
 // ── TAB SWITCH ────────────────────────────────────────────────
@@ -573,6 +616,99 @@ function buildFlashCard(c) {
         dlItem +
       '</div>' +
     '</div></div>';
+}
+function renderPromos() {
+  const list = document.getElementById('promo-list');
+  if (!PROMOS.length) {
+    list.innerHTML = '<div class="no-results"><div class="nr-icon">📣</div><p>No promos right now.</p></div>';
+    return;
+  }
+  list.innerHTML = PROMOS.map(p => {
+    const links = [
+      { label: p.label1, url: p.url1 },
+      { label: p.label2, url: p.url2 },
+      { label: p.label3, url: p.url3 }
+    ].filter(l => l.label && l.url);
+    const linkBtns = links.map(l => '<a class="ticket-btn" style="background:var(--brand)" href="' + l.url + '" target="_blank" rel="noopener">' + l.label + '</a>').join('');
+    const dates = (p.startDate || p.endDate) ?
+      '<div class="promo-dates">' + (p.startDate ? fmtDate(p.startDate) : '') + (p.startDate && p.endDate ? ' – ' : '') + (p.endDate ? fmtDate(p.endDate) : '') + '</div>' : '';
+    const img = p.imageUrl ? '<img src="' + p.imageUrl + '" alt="">' : '';
+    const actions = editing ? '<div class="promo-actions"><button class="promo-edit" onclick="editPromo(\'' + p.id + '\')">✏️ Edit</button><button class="promo-del" onclick="delPromo(\'' + p.id + '\')">🗑️ Delete</button></div>' : '';
+    return '<div class="promo-card">' + img +
+      '<div class="promo-body">' +
+        '<div class="promo-title">' + p.title + '</div>' +
+        dates +
+        (p.description ? '<div class="promo-desc">' + p.description + '</div>' : '') +
+        (linkBtns ? '<div class="promo-links">' + linkBtns + '</div>' : '') +
+        actions +
+      '</div></div>';
+  }).join('');
+}
+function openPromoForm() {
+  promoEditId = null;
+  document.getElementById('promo-form-hdr').textContent = '➕ Add Promo';
+  document.getElementById('pm-title').value = '';
+  document.getElementById('pm-desc').value = '';
+  document.getElementById('pm-image').value = '';
+  document.getElementById('pm-start').value = '';
+  document.getElementById('pm-end').value = '';
+  document.getElementById('pm-label1').value = '';
+  document.getElementById('pm-url1').value = '';
+  document.getElementById('pm-label2').value = '';
+  document.getElementById('pm-url2').value = '';
+  document.getElementById('pm-label3').value = '';
+  document.getElementById('pm-url3').value = '';
+  document.getElementById('promo-form').classList.add('show');
+  document.getElementById('promo-form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closePromoForm() { document.getElementById('promo-form').classList.remove('show'); }
+function editPromo(id) {
+  const p = PROMOS.find(x => x.id === id); if (!p) return;
+  promoEditId = id;
+  document.getElementById('promo-form-hdr').textContent = '✏️ Edit Promo';
+  document.getElementById('pm-title').value = p.title || '';
+  document.getElementById('pm-desc').value = p.description || '';
+  document.getElementById('pm-image').value = p.imageUrl || '';
+  document.getElementById('pm-start').value = p.startDate || '';
+  document.getElementById('pm-end').value = p.endDate || '';
+  document.getElementById('pm-label1').value = p.label1 || '';
+  document.getElementById('pm-url1').value = p.url1 || '';
+  document.getElementById('pm-label2').value = p.label2 || '';
+  document.getElementById('pm-url2').value = p.url2 || '';
+  document.getElementById('pm-label3').value = p.label3 || '';
+  document.getElementById('pm-url3').value = p.url3 || '';
+  document.getElementById('promo-form').classList.add('show');
+  document.getElementById('promo-form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+document.getElementById('pm-save').addEventListener('click', () => {
+  const title = document.getElementById('pm-title').value.trim();
+  if (!title) { document.getElementById('pm-title').focus(); return; }
+  const obj = {
+    title,
+    description: document.getElementById('pm-desc').value.trim(),
+    imageUrl: document.getElementById('pm-image').value.trim(),
+    startDate: document.getElementById('pm-start').value,
+    endDate: document.getElementById('pm-end').value,
+    label1: document.getElementById('pm-label1').value.trim(),
+    url1: document.getElementById('pm-url1').value.trim(),
+    label2: document.getElementById('pm-label2').value.trim(),
+    url2: document.getElementById('pm-url2').value.trim(),
+    label3: document.getElementById('pm-label3').value.trim(),
+    url3: document.getElementById('pm-url3').value.trim()
+  };
+  if (promoEditId) {
+    const i = PROMOS.findIndex(x => x.id === promoEditId);
+    PROMOS[i] = Object.assign({id: promoEditId}, obj);
+  } else {
+    obj.id = 'pm-' + Date.now();
+    PROMOS.push(obj);
+  }
+  closePromoForm(); markDirty(); renderPromos();
+});
+function delPromo(id) {
+  if (!confirm('Delete this promo?')) return;
+  PROMOS = PROMOS.filter(x => x.id !== id);
+  markDirty(); renderPromos();
 }
 function renderMonth(mon) {
   if (mon !== undefined) selectedMonth = mon;
@@ -730,6 +866,7 @@ function submitPin() {
   document.querySelector('#editBtn span').textContent = '🔓';
   closePinModal();
   refreshCatalogBtn();
+  renderPromos();
 }
 function exitEdit() {
   if (dirty && !confirm('You have unsaved changes. Leave edit mode and discard them?')) return;
@@ -740,7 +877,9 @@ function exitEdit() {
   document.querySelector('#editBtn span').textContent = '🔒';
   document.getElementById('saveBar').classList.remove('show');
   closeCampForm();
+  closePromoForm();
   refreshCatalogBtn();
+  renderPromos();
 }
 function markDirty() {
   dirty = true;
@@ -862,6 +1001,7 @@ async function saveAll() {
   try {
     await apiSave('saveCampaigns', CAMPS);
     await apiSave('saveBrandLinks', BRANDS);
+    await apiSave('savePromos', PROMOS);
     dirty = false;
     bar.classList.remove('show');
     setSync('Saved — everyone sees this now', 'ok');
