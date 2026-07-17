@@ -54,6 +54,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .hdr-title h1{color:#fff;font-size:13px;font-weight:600}
 .hdr-title p{color:var(--gold);font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
 .edit-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 12px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s}
+.catalog-btn{background:var(--gold);border:none;color:#1A1A1A;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;padding:7px 12px;border-radius:9px;text-decoration:none;display:flex;align-items:center;gap:5px}
+.catalog-edit-btn{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;padding:6px 8px;border-radius:8px;cursor:pointer}
 .edit-btn:hover{background:rgba(255,255,255,.18)}
 .edit-btn.on{background:var(--gold);color:var(--brand);border-color:var(--gold)}
 
@@ -107,6 +109,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .cc-cat-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;margin-bottom:8px}
 .cc-type{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:8px;margin-left:6px}
 .ticket-btn{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:8px;margin-left:6px;color:#fff;text-decoration:none;white-space:nowrap}
+.brand-edit-btn{display:block;margin-top:6px;font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer}
+.brand-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:200;padding:16px}
+.brand-modal.show{display:flex}
+.brand-modal-inner{background:var(--surface);border-radius:var(--radius);padding:16px;width:100%;max-width:360px;max-height:90vh;overflow-y:auto}
+.brand-modal-inner h3{font-size:15px;margin-bottom:10px}
+.brand-modal-inner input{width:100%;margin-bottom:8px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px}
+.brand-modal-btns{display:flex;gap:8px;margin-top:8px}
+.brand-modal-btns button{flex:1;padding:9px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer}
+.bm-save{background:var(--brand);color:var(--gold)}
+.bm-cancel{background:var(--border);color:var(--text)}
 .cc-type.show{background:#CC000020;color:#CC0000}
 .cc-type.pub{background:#D81B6020;color:#D81B60}
 .past-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#fff;background:#9E9E9E;padding:2px 8px;border-radius:8px;margin-left:6px}
@@ -231,6 +243,8 @@ body.editing .add-btn{display:block}
       <h1>Sales / Events Calendar 2026</h1>
       <p>El Clasificado</p>
     </div>
+    <a id="catalogBtn" class="catalog-btn" href="#" target="_blank" rel="noopener" style="display:none">Catalog</a>
+    <button id="catalogEditBtn" class="catalog-edit-btn" style="display:none" onclick="openBrandForm('site','Site Catalog')">✏️</button>
     <button class="edit-btn" id="editBtn" onclick="toggleEdit()"><span>🔒</span><span id="editBtnLbl">Edit</span></button>
   </div>
   <div class="tab-bar">
@@ -319,6 +333,23 @@ body.editing .add-btn{display:block}
   </div>
 </div>
 
+<!-- BRAND LINKS MODAL -->
+<div class="brand-modal" id="brandModal">
+  <div class="brand-modal-inner">
+    <h3 id="bm-title">Edit Links</h3>
+    <input id="bm-label1" type="text" placeholder="Link 1 label (e.g. Package Finder)" maxlength="40">
+    <input id="bm-url1" type="text" placeholder="Link 1 URL" maxlength="300">
+    <input id="bm-label2" type="text" placeholder="Link 2 label (optional)" maxlength="40">
+    <input id="bm-url2" type="text" placeholder="Link 2 URL" maxlength="300">
+    <input id="bm-label3" type="text" placeholder="Link 3 label (optional)" maxlength="40">
+    <input id="bm-url3" type="text" placeholder="Link 3 URL" maxlength="300">
+    <div class="brand-modal-btns">
+      <button class="bm-cancel" onclick="closeBrandForm()">Cancel</button>
+      <button class="bm-save" onclick="saveBrandForm()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════════
 // EC SALES / EVENTS CALENDAR 2026 — app logic
@@ -336,6 +367,7 @@ const YEAR = 2026;
 
 // State
 let CAMPS = [];      // EC campaigns from Azure
+let BRANDS = [];     // Core Brand link records from Azure
 let activeCat = 'all', searchQ = '', selectedMonth = new Date().getMonth();
 let curWeek = 0;
 let editing = false, editPin = null, dirty = false;
@@ -380,6 +412,8 @@ async function loadAll() {
   curWeek = currentWeekIndex();
   try {
     CAMPS = await apiGet('getCampaigns');
+    try { BRANDS = await apiGet('getBrandLinks'); } catch (e2) { BRANDS = []; }
+    refreshCatalogBtn();
     setSync('Up to date', 'ok');
     setTimeout(() => setSync(''), 1500);
   } catch (e) {
@@ -593,6 +627,22 @@ function buildWeekPicker() {
 }
 function selWeek(i) { curWeek = i; buildWeekPicker(); }
 function wNav(dir) { const n = curWeek + dir; if (n >= 0 && n < MONDAYS.length) { curWeek = n; buildWeekPicker(); } }
+function buildBrandCard(id, name, color) {
+  const rec = BRANDS.find(b => b.id === id) || {};
+  const links = [
+    { label: rec.label1, url: rec.url1 },
+    { label: rec.label2, url: rec.url2 },
+    { label: rec.label3, url: rec.url3 }
+  ].filter(l => l.label && l.url);
+  const linkBtns = links.map(l => '<a class="ticket-btn" style="background:' + color + '" href="' + l.url + '" target="_blank" rel="noopener">' + l.label + '</a>').join('');
+  const editBtn = editing ? '<button class="brand-edit-btn" onclick="openBrandForm(\'' + id + '\',\'' + name + '\')">✏️ Edit Links</button>' : '';
+  return '<div class="fc"><div class="fc-stripe" style="background:' + color + '"></div><div class="fc-body">' +
+    '<div class="fc-name">' + name + '</div>' +
+    '<div class="fc-cat" style="color:' + color + '">Core Brand</div>' +
+    (linkBtns ? '<div style="margin-top:4px">' + linkBtns + '</div>' : '') +
+    editBtn +
+    '</div></div>';
+}
 function renderWeek() {
   const start = MONDAYS[curWeek], end = new Date(start); end.setDate(end.getDate() + 6);
   const inWeek = (iso) => { const d = parseDate(iso); return d && d >= start && d <= end; };
@@ -618,8 +668,8 @@ function renderWeek() {
 
   let html = '';
   const coreSec = '<div class="week-sec-lbl wsl-core">★ Core Brands <span>— always</span></div>' +
-    '<div class="fc"><div class="fc-stripe" style="background:#6A0DAD"></div><div class="fc-body"><div class="fc-name">El Clasificado</div><div class="fc-cat" style="color:#6A0DAD">Core Brand</div></div></div>' +
-    '<div class="fc"><div class="fc-stripe" style="background:#6ABF1E"></div><div class="fc-body"><div class="fc-name">Mas Clientes</div><div class="fc-cat" style="color:#6ABF1E">Core Brand</div></div></div>';
+    buildBrandCard('elclasificado', 'El Clasificado', '#6A0DAD') +
+    buildBrandCard('masclientes', 'Mas Clientes', '#6ABF1E');
   html += coreSec;
 
   const line = (c) => {
@@ -644,6 +694,19 @@ function renderWeek() {
 }
 
 // ── EDIT MODE ─────────────────────────────────────────────────
+function refreshCatalogBtn() {
+  const rec = BRANDS.find(b => b.id === 'site') || {};
+  const btn = document.getElementById('catalogBtn');
+  const editBtn = document.getElementById('catalogEditBtn');
+  if (rec.url1) {
+    btn.href = rec.url1;
+    btn.textContent = rec.label1 || 'Catalog';
+    btn.style.display = 'flex';
+  } else {
+    btn.style.display = 'none';
+  }
+  editBtn.style.display = editing ? 'block' : 'none';
+}
 function toggleEdit() {
   if (editing) { exitEdit(); return; }
   openPinModal();
@@ -666,6 +729,7 @@ function submitPin() {
   document.getElementById('editBtnLbl').textContent = 'Done';
   document.querySelector('#editBtn span').textContent = '🔓';
   closePinModal();
+  refreshCatalogBtn();
 }
 function exitEdit() {
   if (dirty && !confirm('You have unsaved changes. Leave edit mode and discard them?')) return;
@@ -676,10 +740,48 @@ function exitEdit() {
   document.querySelector('#editBtn span').textContent = '🔒';
   document.getElementById('saveBar').classList.remove('show');
   closeCampForm();
+  refreshCatalogBtn();
 }
 function markDirty() {
   dirty = true;
   document.getElementById('saveBar').classList.add('show');
+}
+
+// Brand Links form
+let brandEditId = null;
+function openBrandForm(id, name) {
+  brandEditId = id;
+  const rec = BRANDS.find(b => b.id === id) || {};
+  document.getElementById('bm-title').textContent = 'Edit Links — ' + name;
+  document.getElementById('bm-label1').value = rec.label1 || '';
+  document.getElementById('bm-url1').value = rec.url1 || '';
+  document.getElementById('bm-label2').value = rec.label2 || '';
+  document.getElementById('bm-url2').value = rec.url2 || '';
+  document.getElementById('bm-label3').value = rec.label3 || '';
+  document.getElementById('bm-url3').value = rec.url3 || '';
+  document.getElementById('brandModal').classList.add('show');
+}
+function closeBrandForm() {
+  document.getElementById('brandModal').classList.remove('show');
+  brandEditId = null;
+}
+function saveBrandForm() {
+  if (!brandEditId) return;
+  const obj = {
+    id: brandEditId,
+    label1: document.getElementById('bm-label1').value.trim(),
+    url1: document.getElementById('bm-url1').value.trim(),
+    label2: document.getElementById('bm-label2').value.trim(),
+    url2: document.getElementById('bm-url2').value.trim(),
+    label3: document.getElementById('bm-label3').value.trim(),
+    url3: document.getElementById('bm-url3').value.trim()
+  };
+  const i = BRANDS.findIndex(b => b.id === brandEditId);
+  if (i >= 0) BRANDS[i] = obj; else BRANDS.push(obj);
+  closeBrandForm();
+  markDirty();
+  renderWeek();
+  refreshCatalogBtn();
 }
 
 // Campaign form
@@ -759,6 +861,7 @@ async function saveAll() {
   document.getElementById('saveBarMsg').textContent = 'Saving…';
   try {
     await apiSave('saveCampaigns', CAMPS);
+    await apiSave('saveBrandLinks', BRANDS);
     dirty = false;
     bar.classList.remove('show');
     setSync('Saved — everyone sees this now', 'ok');

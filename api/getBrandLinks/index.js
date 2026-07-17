@@ -1,0 +1,41 @@
+const { TableClient } = require("@azure/data-tables");
+
+const CONN = process.env.AZURE_STORAGE_CONNECTION_STRING;
+const TABLE = "BrandLinks";
+const PARTITION = "2026";
+
+module.exports = async function (context, req) {
+  try {
+    const client = TableClient.fromConnectionString(CONN, TABLE);
+    try { await client.createTable(); } catch (e) { /* already exists, ignore */ }
+
+    const items = [];
+    const entities = client.listEntities({
+      queryOptions: { filter: `PartitionKey eq '${PARTITION}'` }
+    });
+
+    for await (const e of entities) {
+      items.push({
+        id: e.rowKey,
+        label1: e.label1 || "",
+        url1: e.url1 || "",
+        label2: e.label2 || "",
+        url2: e.url2 || "",
+        label3: e.label3 || "",
+        url3: e.url3 || ""
+      });
+    }
+
+    context.res = {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+      body: items
+    };
+  } catch (err) {
+    context.log.error("getBrandLinks error:", err.message);
+    context.res = {
+      status: 500,
+      body: { error: "Could not load brand links.", detail: err.message }
+    };
+  }
+};
