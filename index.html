@@ -120,13 +120,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .bm-save{background:var(--brand);color:var(--gold)}
 .bm-cancel{background:var(--border);color:var(--text)}
 .promo-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
-.promo-card img{width:100%;display:block;max-height:220px;object-fit:cover}
+.promo-card img{width:100%;height:auto;display:block}
 .promo-body{padding:14px}
 .promo-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px}
 .promo-desc{font-size:13px;color:var(--muted);line-height:1.4;margin-bottom:8px;white-space:pre-wrap}
 .promo-price{display:inline-block;background:var(--brand);color:var(--gold);font-size:16px;font-weight:800;padding:6px 14px;border-radius:10px;margin-bottom:10px}
 .promo-cats-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px}
-.promo-cats{list-style:none;margin-bottom:10px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.promo-cats{list-style:none;margin-bottom:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:4px 12px}
 .promo-cats li{font-size:12.5px;color:var(--text);padding-left:14px;position:relative}
 .promo-cats li:before{content:"•";position:absolute;left:0;color:var(--gold);font-weight:900}
 .promo-important{background:var(--gold-light);border:1px solid var(--gold);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--text);margin-bottom:10px;white-space:pre-wrap}
