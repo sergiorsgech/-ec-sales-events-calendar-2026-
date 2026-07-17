@@ -305,6 +305,8 @@ body.editing .add-btn{display:block}
       <label class="ef-check"><input id="cf-showticket" type="checkbox"> Show "Event Tickets" button</label>
       <input id="cf-magazine" type="text" placeholder="Joomag e-magazine link (optional)" maxlength="300">
       <label class="ef-check"><input id="cf-showmagazine" type="checkbox"> Show "E-Magazine" button</label>
+      <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Brands <a href="#" onclick="openManageBrands();return false;" style="font-weight:400">(manage list)</a></label>
+      <div id="cf-brands" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
       <div class="ef-btns">
         <button class="ef-save" id="cf-save">Save Campaign</button>
         <button class="ef-cancel" id="cf-cancel" onclick="closeCampForm()">Cancel</button>
@@ -403,6 +405,22 @@ body.editing .add-btn{display:block}
   </div>
 </div>
 
+<!-- MANAGE BRANDS MODAL -->
+<div class="brand-modal" id="manageBrandsModal">
+  <div class="brand-modal-inner" style="max-width:400px">
+    <h3>Manage Brands</h3>
+    <div id="mb-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:6px;align-items:center;border-top:1px solid var(--border);padding-top:10px">
+      <input id="mb-new-name" type="text" placeholder="New brand name" maxlength="40" style="flex:1;margin-bottom:0">
+      <input id="mb-new-color" type="color" value="#1A1A1A" style="width:38px;height:38px;padding:0;border:1.5px solid var(--border);border-radius:8px">
+      <button onclick="addBrandToList()" style="background:var(--brand);color:var(--gold);border:none;border-radius:8px;padding:0 12px;height:38px;font-weight:700;cursor:pointer">Add</button>
+    </div>
+    <div class="brand-modal-btns" style="margin-top:12px">
+      <button class="bm-cancel" onclick="closeManageBrands()">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════════
 // EC SALES / EVENTS CALENDAR 2026 — app logic
@@ -422,6 +440,7 @@ const YEAR = 2026;
 let CAMPS = [];      // EC campaigns from Azure
 let BRANDS = [];     // Core Brand link records from Azure
 let PROMOS = [];     // Promo/announcement records from Azure
+let BRANDLIST = [];  // Brand tag master list (name+color) for campaign tagging
 let activeCat = 'all', searchQ = '', selectedMonth = new Date().getMonth();
 let curWeek = 0;
 let editing = false, editPin = null, dirty = false;
@@ -470,6 +489,7 @@ async function loadAll() {
     try { BRANDS = await apiGet('getBrandLinks'); } catch (e2) { BRANDS = []; }
     refreshCatalogBtn();
     try { PROMOS = await apiGet('getPromos'); } catch (e3) { PROMOS = []; }
+    try { BRANDLIST = await apiGet('getBrands'); } catch (e4) { BRANDLIST = []; }
     setSync('Up to date', 'ok');
     setTimeout(() => setSync(''), 1500);
   } catch (e) {
@@ -482,6 +502,7 @@ async function loadAll() {
   buildMonthSelector();
   renderMonth();
   buildCatSelect();
+  buildBrandChecklist();
   renderPromos();
 }
 
@@ -506,6 +527,16 @@ function renderCatChips() {
   document.getElementById('catChips').innerHTML = chips.join('');
 }
 
+function brandPillsHtml(c) {
+  const ids = (c.brandIds || '').split(',').filter(Boolean);
+  if (!ids.length) return '';
+  const pills = ids.map(id => {
+    const b = BRANDLIST.find(x => x.id === id);
+    if (!b) return '';
+    return '<span style="display:inline-block;background:' + b.color + ';color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:7px;margin:0 4px 4px 0">' + b.name + '</span>';
+  }).join('');
+  return pills ? '<div style="margin-bottom:4px">' + pills + '</div>' : '';
+}
 function buildCampCard(c) {
   const color = getColor(c.cat);
   const past = isPast(c.event);
@@ -527,6 +558,7 @@ function buildCampCard(c) {
     '<div class="cc-top">' +
       '<div class="cc-stripe" style="background:' + color + '"></div>' +
       '<div class="cc-body">' +
+        brandPillsHtml(c) +
         '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
           '<div>' +
             '<div class="cc-name">' + c.label + '</div>' +
@@ -621,6 +653,7 @@ function buildFlashCard(c) {
   return '<div class="fc' + (past ? ' past' : '') + '">' +
     '<div class="fc-stripe" style="background:' + color + '"></div>' +
     '<div class="fc-body">' +
+      brandPillsHtml(c) +
       '<div class="fc-name">' + c.label + (past ? ' <span class="past-badge">✓ PAST</span>' : '') + '</div>' +
       '<span class="fc-type-badge ' + typeClass + '">' + (c.print ? 'PUBLICATION' : 'SHOW') + '</span>' +
       ticketBtn +
@@ -848,7 +881,7 @@ function renderWeek() {
     const psLabel = ps ? MO_SHORT[ps.getMonth()] + ' ' + String(ps.getDate()).padStart(2,'0') : null;
     const ticketBtn = (c.showTicket && c.ticketUrl) ? '<a class="ticket-btn" style="background:' + getColor(c.cat) + '" href="' + c.ticketUrl + '" target="_blank" rel="noopener">Event Tickets</a>' : '';
     const magazineBtn = (c.showMagazine && c.magazineUrl) ? '<a class="ticket-btn" style="background:' + getColor(c.cat) + '" href="' + c.magazineUrl + '" target="_blank" rel="noopener">E-Magazine</a>' : '';
-    return '<div class="fc"><div class="fc-stripe" style="background:' + getColor(c.cat) + '"></div><div class="fc-body"><div class="fc-name">' + c.label + ticketBtn + magazineBtn + '</div><div class="fc-dates">' +
+    return '<div class="fc"><div class="fc-stripe" style="background:' + getColor(c.cat) + '"></div><div class="fc-body">' + brandPillsHtml(c) + '<div class="fc-name">' + c.label + ticketBtn + magazineBtn + '</div><div class="fc-dates">' +
       '<div class="fc-date-item"><span class="fc-date-lbl">' + (c.print ? 'Pub' : 'Event') + '</span><span class="fc-date-val red">' + fmtDate(c.event) + '</span></div>' +
       (c.dl ? '<div class="fc-date-item"><span class="fc-date-lbl">Deadline</span><span class="fc-date-val orange">' + fmtDate(c.dl) + '</span></div>' : '') +
       (psLabel ? '<div class="fc-date-item"><span class="fc-date-lbl">Prospect From</span><span class="fc-date-val" style="color:var(--green)">' + psLabel + '</span></div>' : '') +
@@ -963,6 +996,56 @@ function buildCatSelect() {
   document.getElementById('cf-cat').innerHTML = CAT_ORDER.map(c =>
     '<option value="' + c + '">' + (CAT_NAME[c] || c) + '</option>').join('');
 }
+function buildBrandChecklist(selectedIds) {
+  selectedIds = selectedIds || [];
+  document.getElementById('cf-brands').innerHTML = BRANDLIST.map(b =>
+    '<label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border:1.5px solid ' + b.color + ';color:' + b.color + ';border-radius:8px;padding:4px 9px;cursor:pointer">' +
+      '<input type="checkbox" class="cf-brand-chk" value="' + b.id + '" ' + (selectedIds.includes(b.id) ? 'checked' : '') + ' style="accent-color:' + b.color + '">' +
+      b.name +
+    '</label>'
+  ).join('');
+}
+function openManageBrands() {
+  renderManageBrandsList();
+  document.getElementById('manageBrandsModal').classList.add('show');
+}
+function closeManageBrands() {
+  document.getElementById('manageBrandsModal').classList.remove('show');
+  buildBrandChecklist(getCheckedBrandIds());
+}
+function renderManageBrandsList() {
+  document.getElementById('mb-list').innerHTML = BRANDLIST.map(b =>
+    '<div style="display:flex;align-items:center;gap:6px">' +
+      '<input type="color" value="' + b.color + '" onchange="updateBrandColor(\'' + b.id + '\',this.value)" style="width:32px;height:32px;padding:0;border:1.5px solid var(--border);border-radius:6px">' +
+      '<input type="text" value="' + b.name + '" onchange="updateBrandName(\'' + b.id + '\',this.value)" style="flex:1;padding:6px 8px;border-radius:6px;border:1.5px solid var(--border);font-size:13px">' +
+      '<button onclick="deleteBrandFromList(\'' + b.id + '\')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">🗑️</button>' +
+    '</div>'
+  ).join('');
+}
+function updateBrandColor(id, color) {
+  const b = BRANDLIST.find(x => x.id === id); if (b) { b.color = color; markDirty(); renderPromos(); renderDir(); renderMonth(); buildWeekPicker(); }
+}
+function updateBrandName(id, name) {
+  const b = BRANDLIST.find(x => x.id === id); if (b) { b.name = name.trim(); markDirty(); renderDir(); renderMonth(); buildWeekPicker(); }
+}
+function deleteBrandFromList(id) {
+  if (!confirm('Delete this brand? It will be removed from any campaigns using it.')) return;
+  BRANDLIST = BRANDLIST.filter(b => b.id !== id);
+  CAMPS.forEach(c => { c.brandIds = (c.brandIds || '').split(',').filter(x => x && x !== id).join(','); });
+  markDirty(); renderManageBrandsList(); renderDir(); renderMonth(); buildWeekPicker();
+}
+function addBrandToList() {
+  const name = document.getElementById('mb-new-name').value.trim();
+  const color = document.getElementById('mb-new-color').value;
+  if (!name) return;
+  const id = 'b-' + Date.now();
+  BRANDLIST.push({ id, name, color });
+  document.getElementById('mb-new-name').value = '';
+  markDirty(); renderManageBrandsList();
+}
+function getCheckedBrandIds() {
+  return Array.from(document.querySelectorAll('.cf-brand-chk:checked')).map(el => el.value);
+}
 function openCampForm() {
   campEditId = null;
   document.getElementById('camp-form-hdr').textContent = '➕ Add Campaign';
@@ -976,6 +1059,7 @@ function openCampForm() {
   document.getElementById('cf-showticket').checked = false;
   document.getElementById('cf-magazine').value = '';
   document.getElementById('cf-showmagazine').checked = false;
+  buildBrandChecklist([]);
   document.getElementById('camp-form').classList.add('show');
   document.getElementById('camp-form').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -994,6 +1078,7 @@ function editCamp(id) {
   document.getElementById('cf-showticket').checked = !!c.showTicket;
   document.getElementById('cf-magazine').value = c.magazineUrl || '';
   document.getElementById('cf-showmagazine').checked = !!c.showMagazine;
+  buildBrandChecklist((c.brandIds || '').split(',').filter(Boolean));
   document.getElementById('camp-form').classList.add('show');
   document.getElementById('camp-form').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -1010,7 +1095,8 @@ document.getElementById('cf-save').addEventListener('click', () => {
     ticketUrl: document.getElementById('cf-ticket').value.trim() || null,
     showTicket: document.getElementById('cf-showticket').checked,
     magazineUrl: document.getElementById('cf-magazine').value.trim() || null,
-    showMagazine: document.getElementById('cf-showmagazine').checked
+    showMagazine: document.getElementById('cf-showmagazine').checked,
+    brandIds: getCheckedBrandIds().join(',')
   };
   if (campEditId) {
     const i = CAMPS.findIndex(x => x.id === campEditId);
@@ -1037,6 +1123,7 @@ async function saveAll() {
     await apiSave('saveCampaigns', CAMPS);
     await apiSave('saveBrandLinks', BRANDS);
     await apiSave('savePromos', PROMOS);
+    await apiSave('saveBrands', BRANDLIST);
     dirty = false;
     bar.classList.remove('show');
     setSync('Saved — everyone sees this now', 'ok');

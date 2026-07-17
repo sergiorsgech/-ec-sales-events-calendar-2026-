@@ -25,7 +25,8 @@ module.exports = async function (context, req) {
         ticketUrl: e.ticketUrl || null,
         showTicket: e.showTicket === true || e.showTicket === "true",
         magazineUrl: e.magazineUrl || null,
-        showMagazine: e.showMagazine === true || e.showMagazine === "true"
+        showMagazine: e.showMagazine === true || e.showMagazine === "true",
+        brandIds: e.brandIds || ""
       });
     }
 
