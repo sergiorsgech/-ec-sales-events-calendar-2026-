@@ -50,7 +50,8 @@ module.exports = async function (context, req) {
         label2: p.label2 || "",
         url2: p.url2 || "",
         label3: p.label3 || "",
-        url3: p.url3 || ""
+        url3: p.url3 || "",
+        brandIds: p.brandIds || ""
       });
     }
 

@@ -359,6 +359,8 @@ body.editing .add-btn{display:block}
       <input id="pm-url2" type="text" placeholder="Link 2 URL" maxlength="300">
       <input id="pm-label3" type="text" placeholder="Link 3 label (optional)" maxlength="40">
       <input id="pm-url3" type="text" placeholder="Link 3 URL" maxlength="300">
+      <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Brands <a href="#" onclick="openManageBrands();return false;" style="font-weight:400">(manage list)</a></label>
+      <div id="pm-brands" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
       <div class="ef-btns">
         <button class="ef-save" id="pm-save">Save Promo</button>
         <button class="ef-cancel" onclick="closePromoForm()">Cancel</button>
@@ -527,6 +529,10 @@ function renderCatChips() {
   document.getElementById('catChips').innerHTML = chips.join('');
 }
 
+function brandColor(id, fallback) {
+  const b = BRANDLIST.find(x => x.id === id);
+  return b ? b.color : fallback;
+}
 function brandPillsHtml(c) {
   const ids = (c.brandIds || '').split(',').filter(Boolean);
   if (!ids.length) return '';
@@ -688,6 +694,7 @@ function renderPromos() {
     const actions = editing ? '<div class="promo-actions"><button class="promo-edit" onclick="editPromo(\'' + p.id + '\')">✏️ Edit</button><button class="promo-del" onclick="delPromo(\'' + p.id + '\')">🗑️ Delete</button></div>' : '';
     return '<div class="promo-card">' + img +
       '<div class="promo-body">' +
+        brandPillsHtml(p) +
         '<div class="promo-title">' + p.title + '</div>' +
         dates +
         (p.description ? '<div class="promo-desc">' + p.description + '</div>' : '') +
@@ -718,6 +725,7 @@ function openPromoForm() {
   document.getElementById('pm-url2').value = '';
   document.getElementById('pm-label3').value = '';
   document.getElementById('pm-url3').value = '';
+  buildBrandChecklist([], 'pm-brands', 'pm-brand-chk');
   document.getElementById('promo-form').classList.add('show');
   document.getElementById('promo-form').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -741,6 +749,7 @@ function editPromo(id) {
   document.getElementById('pm-url2').value = p.url2 || '';
   document.getElementById('pm-label3').value = p.label3 || '';
   document.getElementById('pm-url3').value = p.url3 || '';
+  buildBrandChecklist((p.brandIds || '').split(',').filter(Boolean), 'pm-brands', 'pm-brand-chk');
   document.getElementById('promo-form').classList.add('show');
   document.getElementById('promo-form').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -762,7 +771,8 @@ document.getElementById('pm-save').addEventListener('click', () => {
     label2: document.getElementById('pm-label2').value.trim(),
     url2: document.getElementById('pm-url2').value.trim(),
     label3: document.getElementById('pm-label3').value.trim(),
-    url3: document.getElementById('pm-url3').value.trim()
+    url3: document.getElementById('pm-url3').value.trim(),
+    brandIds: getCheckedBrandIds('pm-brand-chk').join(',')
   };
   if (promoEditId) {
     const i = PROMOS.findIndex(x => x.id === promoEditId);
@@ -872,8 +882,8 @@ function renderWeek() {
 
   let html = '';
   const coreSec = '<div class="week-sec-lbl wsl-core">★ Core Brands <span>— always</span></div>' +
-    buildBrandCard('elclasificado', 'El Clasificado', '#6A0DAD') +
-    buildBrandCard('masclientes', 'Mas Clientes', '#6ABF1E');
+    buildBrandCard('elclasificado', 'El Clasificado', brandColor('elclasificado', '#6A0DAD')) +
+    buildBrandCard('masclientes', 'Mas Clientes', brandColor('masclientes', '#6ABF1E'));
   html += coreSec;
 
   const line = (c) => {
@@ -996,11 +1006,13 @@ function buildCatSelect() {
   document.getElementById('cf-cat').innerHTML = CAT_ORDER.map(c =>
     '<option value="' + c + '">' + (CAT_NAME[c] || c) + '</option>').join('');
 }
-function buildBrandChecklist(selectedIds) {
+function buildBrandChecklist(selectedIds, containerId, chkClass) {
   selectedIds = selectedIds || [];
-  document.getElementById('cf-brands').innerHTML = BRANDLIST.map(b =>
+  containerId = containerId || 'cf-brands';
+  chkClass = chkClass || 'cf-brand-chk';
+  document.getElementById(containerId).innerHTML = BRANDLIST.map(b =>
     '<label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border:1.5px solid ' + b.color + ';color:' + b.color + ';border-radius:8px;padding:4px 9px;cursor:pointer">' +
-      '<input type="checkbox" class="cf-brand-chk" value="' + b.id + '" ' + (selectedIds.includes(b.id) ? 'checked' : '') + ' style="accent-color:' + b.color + '">' +
+      '<input type="checkbox" class="' + chkClass + '" value="' + b.id + '" ' + (selectedIds.includes(b.id) ? 'checked' : '') + ' style="accent-color:' + b.color + '">' +
       b.name +
     '</label>'
   ).join('');
@@ -1011,7 +1023,8 @@ function openManageBrands() {
 }
 function closeManageBrands() {
   document.getElementById('manageBrandsModal').classList.remove('show');
-  buildBrandChecklist(getCheckedBrandIds());
+  if (document.getElementById('camp-form').classList.contains('show')) buildBrandChecklist(getCheckedBrandIds('cf-brand-chk'), 'cf-brands', 'cf-brand-chk');
+  if (document.getElementById('promo-form').classList.contains('show')) buildBrandChecklist(getCheckedBrandIds('pm-brand-chk'), 'pm-brands', 'pm-brand-chk');
 }
 function renderManageBrandsList() {
   document.getElementById('mb-list').innerHTML = BRANDLIST.map(b =>
@@ -1043,8 +1056,9 @@ function addBrandToList() {
   document.getElementById('mb-new-name').value = '';
   markDirty(); renderManageBrandsList();
 }
-function getCheckedBrandIds() {
-  return Array.from(document.querySelectorAll('.cf-brand-chk:checked')).map(el => el.value);
+function getCheckedBrandIds(chkClass) {
+  chkClass = chkClass || 'cf-brand-chk';
+  return Array.from(document.querySelectorAll('.' + chkClass + ':checked')).map(el => el.value);
 }
 function openCampForm() {
   campEditId = null;

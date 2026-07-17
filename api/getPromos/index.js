@@ -31,7 +31,8 @@ module.exports = async function (context, req) {
         label2: e.label2 || "",
         url2: e.url2 || "",
         label3: e.label3 || "",
-        url3: e.url3 || ""
+        url3: e.url3 || "",
+        brandIds: e.brandIds || ""
       });
     }
 

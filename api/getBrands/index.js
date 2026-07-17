@@ -5,7 +5,7 @@ const TABLE = "Brands";
 const PARTITION = "2026";
 
 const DEFAULTS = [
-  { id: "elclasificado",   name: "El Clasificado",     color: "#1A1A1A" },
+  { id: "elclasificado",   name: "El Clasificado",     color: "#6A0DAD" },
   { id: "elclasificadocom",name: "Elclasificado.com",  color: "#F5A623" },
   { id: "masclientes",     name: "Mas Clientes",       color: "#6ABF1E" },
   { id: "quinceanera",     name: "Quinceañera",        color: "#E91E8C" },
