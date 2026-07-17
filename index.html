@@ -100,6 +100,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .camp-grid{display:flex;flex-direction:column;gap:10px}
 
 .camp-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;animation:fadeUp .18s ease}
+.cc-collapsed-row{display:flex;cursor:pointer}
+.cc-collapsed-row .cc-stripe{width:5px;flex-shrink:0}
+.cc-collapsed-body{flex:1;padding:10px 12px}
+.cc-collapsed-name{font-size:13px;font-weight:700;color:var(--text)}
+.cc-chevron{font-size:13px;color:var(--muted);transition:transform .15s;flex-shrink:0;margin-left:8px}
+.camp-card.expanded .cc-chevron{transform:rotate(90deg)}
+.camp-card.past .cc-full-content{display:none}
+.camp-card.past.expanded .cc-full-content{display:block}
 .camp-card.past{opacity:.55}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .cc-top{display:flex;align-items:stretch}
@@ -120,6 +128,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .bm-save{background:var(--brand);color:var(--gold)}
 .bm-cancel{background:var(--border);color:var(--text)}
 .promo-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
+.promo-collapsed-row{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer}
+.promo-collapsed-row .promo-collapsed-title{font-size:14px;font-weight:700;color:var(--text);flex:1}
+.promo-collapsed-row .cc-chevron{font-size:13px;color:var(--muted);transition:transform .15s;flex-shrink:0}
+.promo-card.expanded .promo-collapsed-row .cc-chevron{transform:rotate(90deg)}
+.promo-card .promo-full-content{display:none}
+.promo-card.expanded .promo-full-content{display:block}
 .promo-card img{width:100%;height:auto;display:block}
 .promo-body{padding:14px}
 .promo-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px}
@@ -560,7 +574,22 @@ function buildCampCard(c) {
   const ticketBtn = (c.showTicket && c.ticketUrl) ? '<a class="ticket-btn" style="background:' + color + '" href="' + c.ticketUrl + '" target="_blank" rel="noopener">Event Tickets</a>' : '';
   const magazineBtn = (c.showMagazine && c.magazineUrl) ? '<a class="ticket-btn" style="background:' + color + '" href="' + c.magazineUrl + '" target="_blank" rel="noopener">E-Magazine</a>' : '';
 
+  const collapsedRow = past ?
+    '<div class="cc-collapsed-row" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
+      '<div class="cc-stripe" style="background:' + color + '"></div>' +
+      '<div class="cc-collapsed-body">' +
+        brandPillsHtml(c) +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+          '<span class="cc-collapsed-name">' + c.label + '</span>' +
+          '<span class="cc-chevron">▸</span>' +
+        '</div>' +
+        '<span class="cc-cat-badge" style="background:' + color + '">' + (CAT_NAME[c.cat] || c.cat) + '</span>' +
+      '</div>' +
+    '</div>' : '';
+
   return '<div class="camp-card' + (past ? ' past' : '') + '" data-cat="' + c.cat + '">' +
+    collapsedRow +
+    '<div class="cc-full-content">' +
     '<div class="cc-top">' +
       '<div class="cc-stripe" style="background:' + color + '"></div>' +
       '<div class="cc-body">' +
@@ -591,6 +620,7 @@ function buildCampCard(c) {
     '<div class="cc-edit-actions">' +
       '<button class="cc-edit-btn" onclick="editCamp(\'' + c.id + '\')">✏️ Edit</button>' +
       '<button class="cc-edit-btn del" onclick="delCamp(\'' + c.id + '\')">🗑 Delete</button>' +
+    '</div>' +
     '</div>' +
   '</div>';
 }
@@ -692,7 +722,14 @@ function renderPromos() {
     const importantHtml = p.important ? '<div class="promo-important">' + p.important + '</div>' : '';
     const spotsHtml = p.spots ? '<div class="promo-spots">' + p.spots + '</div>' : '';
     const actions = editing ? '<div class="promo-actions"><button class="promo-edit" onclick="editPromo(\'' + p.id + '\')">✏️ Edit</button><button class="promo-del" onclick="delPromo(\'' + p.id + '\')">🗑️ Delete</button></div>' : '';
-    return '<div class="promo-card">' + img +
+    const collapsedRow = '<div class="promo-collapsed-row" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
+      brandPillsHtml(p) +
+      '<span class="promo-collapsed-title">' + p.title + '</span>' +
+      '<span class="cc-chevron">▸</span>' +
+    '</div>';
+    return '<div class="promo-card">' +
+      collapsedRow +
+      '<div class="promo-full-content">' + img +
       '<div class="promo-body">' +
         brandPillsHtml(p) +
         '<div class="promo-title">' + p.title + '</div>' +
@@ -704,7 +741,7 @@ function renderPromos() {
         spotsHtml +
         (linkBtns ? '<div class="promo-links">' + linkBtns + '</div>' : '') +
         actions +
-      '</div></div>';
+      '</div></div></div>';
   }).join('');
 }
 function openPromoForm() {
