@@ -124,6 +124,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .promo-body{padding:14px}
 .promo-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px}
 .promo-desc{font-size:13px;color:var(--muted);line-height:1.4;margin-bottom:8px;white-space:pre-wrap}
+.promo-price{display:inline-block;background:var(--brand);color:var(--gold);font-size:16px;font-weight:800;padding:6px 14px;border-radius:10px;margin-bottom:10px}
+.promo-cats-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px}
+.promo-cats{list-style:none;margin-bottom:10px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.promo-cats li{font-size:12.5px;color:var(--text);padding-left:14px;position:relative}
+.promo-cats li:before{content:"•";position:absolute;left:0;color:var(--gold);font-weight:900}
+.promo-important{background:var(--gold-light);border:1px solid var(--gold);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--text);margin-bottom:10px;white-space:pre-wrap}
+.promo-important:before{content:"⚠️ ";}
+.promo-spots{display:inline-block;background:rgba(204,0,0,.1);color:var(--red);font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;margin-bottom:10px}
 .promo-dates{font-size:11px;color:var(--muted);margin-bottom:8px}
 .promo-links{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .promo-actions{display:flex;gap:8px;border-top:1px solid var(--border);padding-top:8px;margin-top:4px}
@@ -330,8 +338,14 @@ body.editing .add-btn{display:block}
   <div class="edit-form" id="promo-form">
     <div class="ef-hdr" id="promo-form-hdr">➕ Add Promo</div>
     <div class="ef-body">
-      <input id="pm-title" type="text" placeholder="Title" maxlength="80">
-      <textarea id="pm-desc" placeholder="Description" maxlength="500" rows="3" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:8px"></textarea>
+      <input id="pm-title" type="text" placeholder="Title" maxlength="120">
+      <textarea id="pm-desc" placeholder="Intro / description" maxlength="2000" rows="4" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:8px"></textarea>
+      <input id="pm-price" type="text" placeholder="Price (e.g. $400.00 or Booth: $400)" maxlength="80">
+      <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Eligible Categories (one per line)</label>
+      <textarea id="pm-categories" placeholder="Invitaciones&#10;Mesas de dulces y Candy Bars&#10;Decoración con globos" maxlength="2000" rows="6" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:8px"></textarea>
+      <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Important Note</label>
+      <textarea id="pm-important" placeholder="Este precio especial aplica únicamente para..." maxlength="1000" rows="4" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:8px"></textarea>
+      <input id="pm-spots" type="text" placeholder="Limited spots (e.g. Espacios limitados: 4-10 max)" maxlength="80">
       <input id="pm-image" type="text" placeholder="Image / flyer URL (optional)" maxlength="400">
       <div class="ef-row">
         <input id="pm-start" type="date" placeholder="Start date">
@@ -633,12 +647,21 @@ function renderPromos() {
     const dates = (p.startDate || p.endDate) ?
       '<div class="promo-dates">' + (p.startDate ? fmtDate(p.startDate) : '') + (p.startDate && p.endDate ? ' – ' : '') + (p.endDate ? fmtDate(p.endDate) : '') + '</div>' : '';
     const img = p.imageUrl ? '<img src="' + p.imageUrl + '" alt="">' : '';
+    const priceHtml = p.price ? '<div class="promo-price">' + p.price + '</div>' : '';
+    const catsList = (p.categories || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const catsHtml = catsList.length ? '<div class="promo-cats-lbl">Eligible Categories</div><ul class="promo-cats">' + catsList.map(c => '<li>' + c + '</li>').join('') + '</ul>' : '';
+    const importantHtml = p.important ? '<div class="promo-important">' + p.important + '</div>' : '';
+    const spotsHtml = p.spots ? '<div class="promo-spots">' + p.spots + '</div>' : '';
     const actions = editing ? '<div class="promo-actions"><button class="promo-edit" onclick="editPromo(\'' + p.id + '\')">✏️ Edit</button><button class="promo-del" onclick="delPromo(\'' + p.id + '\')">🗑️ Delete</button></div>' : '';
     return '<div class="promo-card">' + img +
       '<div class="promo-body">' +
         '<div class="promo-title">' + p.title + '</div>' +
         dates +
         (p.description ? '<div class="promo-desc">' + p.description + '</div>' : '') +
+        priceHtml +
+        catsHtml +
+        importantHtml +
+        spotsHtml +
         (linkBtns ? '<div class="promo-links">' + linkBtns + '</div>' : '') +
         actions +
       '</div></div>';
@@ -649,6 +672,10 @@ function openPromoForm() {
   document.getElementById('promo-form-hdr').textContent = '➕ Add Promo';
   document.getElementById('pm-title').value = '';
   document.getElementById('pm-desc').value = '';
+  document.getElementById('pm-price').value = '';
+  document.getElementById('pm-categories').value = '';
+  document.getElementById('pm-important').value = '';
+  document.getElementById('pm-spots').value = '';
   document.getElementById('pm-image').value = '';
   document.getElementById('pm-start').value = '';
   document.getElementById('pm-end').value = '';
@@ -668,6 +695,10 @@ function editPromo(id) {
   document.getElementById('promo-form-hdr').textContent = '✏️ Edit Promo';
   document.getElementById('pm-title').value = p.title || '';
   document.getElementById('pm-desc').value = p.description || '';
+  document.getElementById('pm-price').value = p.price || '';
+  document.getElementById('pm-categories').value = p.categories || '';
+  document.getElementById('pm-important').value = p.important || '';
+  document.getElementById('pm-spots').value = p.spots || '';
   document.getElementById('pm-image').value = p.imageUrl || '';
   document.getElementById('pm-start').value = p.startDate || '';
   document.getElementById('pm-end').value = p.endDate || '';
@@ -686,6 +717,10 @@ document.getElementById('pm-save').addEventListener('click', () => {
   const obj = {
     title,
     description: document.getElementById('pm-desc').value.trim(),
+    price: document.getElementById('pm-price').value.trim(),
+    categories: document.getElementById('pm-categories').value.trim(),
+    important: document.getElementById('pm-important').value.trim(),
+    spots: document.getElementById('pm-spots').value.trim(),
     imageUrl: document.getElementById('pm-image').value.trim(),
     startDate: document.getElementById('pm-start').value,
     endDate: document.getElementById('pm-end').value,
